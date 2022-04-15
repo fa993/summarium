@@ -73,7 +73,6 @@ public class SymblAPIHandle {
                 e.printStackTrace();
                 break;
             }
-            System.out.println("Task taken, " + t.state);
             try {
                 switch (t.state) {
                     case SCHEDULED:
@@ -88,8 +87,9 @@ public class SymblAPIHandle {
                         break;
                     case AUDIO_PROCESSING:
                         //make call to symbl api to check job state
+                        System.out.println("Task Checking Status, " + t.state);
                         t.exponentialBackOffStep = t.exponentialBackOffStep > 7 ? 8 : t.exponentialBackOffStep + 1;
-                        if (Instant.now().isAfter(t.lastStatusCheck.plus(30, ChronoUnit.SECONDS)) && checkJobState(t)) {
+                        if (Instant.now().isAfter(t.lastStatusCheck.plus((long) Math.pow(2, t.exponentialBackOffStep) + 4, ChronoUnit.SECONDS)) && checkJobState(t)) {
                             t.state = CompletionState.AUDIO_PROCESSED;
                             System.out.println("Completed Processing");
                             t.exponentialBackOffStep = 0;
@@ -122,7 +122,7 @@ public class SymblAPIHandle {
                 filesToProcess.add(t);
             }
             try {
-                Thread.sleep((long) (500 + Math.pow(2, t.exponentialBackOffStep) * 100));
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 break;
@@ -134,6 +134,7 @@ public class SymblAPIHandle {
     public void kill() {
         this.killed = true;
         exService.shutdown();
+        System.out.println("Killed");
     }
 
      public boolean isDone(String id) {
