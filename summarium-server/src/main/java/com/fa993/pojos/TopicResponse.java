@@ -1,4 +1,4 @@
-package pojos;
+package com.fa993.pojos;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

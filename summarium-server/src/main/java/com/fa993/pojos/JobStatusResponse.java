@@ -1,4 +1,4 @@
-package pojos;
+package com.fa993.pojos;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -11,7 +11,7 @@ public class JobStatusResponse {
     String status;
 
     public boolean isCompleted() {
-        return status == "completed";
+        return status.equals("completed");
     }
 
 }

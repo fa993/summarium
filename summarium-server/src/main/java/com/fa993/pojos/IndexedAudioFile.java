@@ -1,6 +1,5 @@
-package pojos;
+package com.fa993.pojos;
 
-import java.time.Instant;
 import java.util.Date;
 
 public class IndexedAudioFile {

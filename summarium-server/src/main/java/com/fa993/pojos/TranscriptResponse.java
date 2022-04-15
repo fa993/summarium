@@ -1,8 +1,7 @@
-package pojos;
+package com.fa993.pojos;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.time.Instant;
 import java.util.Date;
 
 public class TranscriptResponse {
