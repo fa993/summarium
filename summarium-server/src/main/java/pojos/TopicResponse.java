@@ -5,46 +5,47 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TopicResponse {
 
     @JsonProperty("topics")
-    Topic[] topics;
+    public Topic[] topics;
 
-}
+    public static class Topic {
 
-class Topic {
+        @JsonProperty("text")
+        public String text;
 
-    @JsonProperty("text")
-    String text;
+        @JsonProperty("type")
+        public String type;
 
-    @JsonProperty("type")
-    String type;
+        @JsonProperty("score")
+        public double score;
 
-    @JsonProperty("score")
-    double score;
+        @JsonProperty("messageIds")
+        public String[] messageIds;
 
-    @JsonProperty("messageIds")
-    String[] messageIds;
+        @JsonProperty("sentiment")
+        public Sentiment sentiment;
 
-    @JsonProperty("sentiment")
-    Sentiment sentiment;
+        @JsonProperty("parentRefs")
+        public ParentRef[] parentRefs;
+    }
 
-    @JsonProperty("parentRefs")
-    ParentRef[] parentRefs;
-}
+    public static class Sentiment {
+        @JsonProperty("polarity")
+        public Polarity polarity;
+        @JsonProperty("suggested")
+        public String suggested;
+    }
 
-class Sentiment {
-    @JsonProperty("polarity")
-    Polarity polarity;
-    @JsonProperty("suggested")
-    String suggested;
-}
+    public static class Polarity {
+        @JsonProperty("score")
+        public double score;
+    }
 
-class Polarity {
-    @JsonProperty("score")
-    double score;
-}
+    public static class ParentRef {
+        @JsonProperty("type")
+        public String type;
 
-class ParentRef {
-    @JsonProperty("type")
-    String type;
-    @JsonProperty("text")
-    String text;
+        @JsonProperty("text")
+        public String text;
+    }
+
 }

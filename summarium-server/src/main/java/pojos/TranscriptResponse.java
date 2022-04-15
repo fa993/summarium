@@ -8,49 +8,49 @@ import java.util.Date;
 public class TranscriptResponse {
 
     @JsonProperty("messages")
-    Message[] messages;
+    public Message[] messages;
 
     public static class Message {
 
         @JsonProperty("id")
-        String id;
+        public String id;
 
         @JsonProperty("text")
-        String text;
+        public String text;
 
         @JsonProperty("from")
-        MessageEntity from;
+        public MessageEntity from;
 
         @JsonProperty("startTime")
-        Date startTime;
+        public Date startTime;
 
         @JsonProperty("endTime")
-        Date endTime;
+        public Date endTime;
 
         @JsonProperty("conversationId")
-        String conversationId;
+        public String conversationId;
 
         @JsonProperty("phrases")
-        MessagePhrase[] phrases;
+        public MessagePhrase[] phrases;
 
     }
 
     public static class MessageEntity {
 
         @JsonProperty("name")
-        String name;
+        public String name;
 
         @JsonProperty("email")
-        String email;
+        public String email;
     }
 
     public static class MessagePhrase {
 
         @JsonProperty("type")
-        String type;
+        public String type;
 
         @JsonProperty("text")
-        String text;
+        public String text;
     }
 
 }

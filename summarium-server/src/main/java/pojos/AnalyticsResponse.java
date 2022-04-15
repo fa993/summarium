@@ -4,85 +4,85 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AnalyticsResponse {
 
-    Metric[] metrics;
-    AnalyticsMember[] members;
+    public Metric[] metrics;
+    public AnalyticsMember[] members;
 
     public static class Metric {
 
         @JsonProperty("type")
-        String type;
+        public String type;
 
         @JsonProperty("percent")
-        double percent;
+        public double percent;
 
         @JsonProperty("seconds")
-        double seconds;
+        public double seconds;
 
     }
 
     public static class AnalyticsMember {
 
         @JsonProperty("id")
-        String id;
+        public String id;
 
         @JsonProperty("name")
-        String name;
+        public String name;
 
         @JsonProperty("userId")
-        String userId;
+        public String userId;
 
         @JsonProperty("pace")
-        Pace pace;
+        public Pace pace;
 
         @JsonProperty("talkTime")
-        ActivityTime talkTime;
+        public ActivityTime talkTime;
 
         @JsonProperty("listenTime")
-        ActivityTime listenTime;
+        public ActivityTime listenTime;
 
         @JsonProperty("overlap")
-        Overlap overlap;
+        public Overlap overlap;
     }
 
     public static class Pace {
 
         @JsonProperty("wpm")
-        double wpm;
+        public double wpm;
     }
 
     public static class ActivityTime {
 
         @JsonProperty("percentage")
-        double percentage;
+        public double percentage;
 
         @JsonProperty("seconds")
-        double seconds;
+        public double seconds;
     }
 
     public static class Overlap {
 
         @JsonProperty("overlapDuration")
-        double overlapDuration;
+        public double overlapDuration;
 
         @JsonProperty("overlappingMembers")
-        OverlapMember[] overlappingMembers;
+        public OverlapMember[] overlappingMembers;
     }
 
     public static class OverlapMember {
         @JsonProperty("id")
-        String id;
+        public String id;
 
         @JsonProperty("name")
-        String name;
+        public String name;
 
         @JsonProperty("userId")
-        String userId;
+        public String userId;
 
         @JsonProperty("percentage")
-        double percentage;
+        public double percentage;
 
         @JsonProperty("seconds")
-        double seconds;
+        public double seconds;
     }
 
 }

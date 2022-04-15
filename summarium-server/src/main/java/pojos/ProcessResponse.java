@@ -5,9 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ProcessResponse {
 
     @JsonProperty("conversationId")
-    String conversationId;
+    public String conversationId;
 
     @JsonProperty("jobId")
-    String jobId;
+    public String jobId;
 
 }

@@ -1,17 +1,20 @@
 package pojos;
 
 import java.time.Instant;
+import java.util.Date;
 
 public class IndexedAudioFile {
 
-    IndexedTopic[] topics;
+    public IndexedTopic[] topics;
+
+    public static class IndexedTopic {
+
+        public String text;
+        public Date[] timestamps;
+        public double score;
+
+    }
+
 
 }
 
-class IndexedTopic {
-
-    String text;
-    Instant[] timestamps;
-    double score;
-
-}

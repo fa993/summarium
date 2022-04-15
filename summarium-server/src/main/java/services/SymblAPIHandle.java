@@ -11,12 +11,15 @@ import utils.Utility;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static controllers.FileController.dirName;
 import static controllers.FileController.done;
+
+import pojos.TranscriptResponse.*;
+
+import javax.annotation.PreDestroy;
 
 @Service
 public class SymblAPIHandle {
@@ -49,13 +52,13 @@ public class SymblAPIHandle {
                         this.filesToProcess.add(t);
                         break;
                     case AUDIO_PROCESSED:
+                        //make calls to get the corresponding data... (get messages, topics, and summary) and save json file
                         TopicResponse tr = fetchTopics(t);
                         AnalyticsResponse ar = fetchAnalytics(t);
                         TranscriptResponse trr = fetchTranscript(t);
                         IndexedAudioFile fr = process(tr, trr, ar);
                         Utility.obm.writeValue(Paths.get(dirName, done, t.filename + ".json").toFile(), fr);
                         t.state = CompletionState.COMPLETED;
-                        //make calls to get the corresponding data... (get messages, topics, and summary) and save json file
                         break;
                     case FAILED:
                         //notify using websocket that task failed
@@ -71,6 +74,11 @@ public class SymblAPIHandle {
             }
             Thread.sleep(500);
         }
+    }
+
+    @PreDestroy
+    public void kill() {
+        this.killed = true;
     }
 
     public void processConversation() {
@@ -135,8 +143,29 @@ public class SymblAPIHandle {
     }
 
     public IndexedAudioFile process(TopicResponse to, TranscriptResponse tr, AnalyticsResponse ar) {
-        Map<String, Instant> messagesIdsToTimestamps = new HashMap<>();
-        for()
+        Map<String, Date> messagesIdsToTimestamps = new HashMap<>();
+
+        IndexedAudioFile audi = new IndexedAudioFile();
+        List<IndexedAudioFile.IndexedTopic> tps = new ArrayList<>();
+
+        for(TranscriptResponse.Message ms : tr.messages) {
+            messagesIdsToTimestamps.put(ms.id, ms.startTime);
+        }
+
+        Arrays.sort(to.topics, (o1, o2) -> (int) ((o2.score - o1.score) * 1000));
+
+        for(int i = 0; i < to.topics.length && to.topics[i].score > 0.4; i++ ){
+            IndexedAudioFile.IndexedTopic tp = new IndexedAudioFile.IndexedTopic();
+            tp.text = to.topics[i].text;
+            tp.timestamps = new Date[to.topics[i].messageIds.length];
+            for(int j = 0; j < to.topics[i].messageIds.length; j++) {
+                String msgId = to.topics[i].messageIds[j];
+                tp.timestamps[j] = messagesIdsToTimestamps.get(msgId);
+            }
+            tps.add(tp);
+        }
+        audi.topics = tps.toArray(new IndexedAudioFile.IndexedTopic[0]);
+        return audi;
     }
 
 }
