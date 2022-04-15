@@ -29,7 +29,7 @@ public class FileController {
     public ResponseEntity<?> handleFileUpload(@RequestParam("audiofile")MultipartFile file) {
         String uuid = UUID.randomUUID().toString();
         try {
-            File f = new File(Utility.dataDir.toFile(), uuid + ".mp3");
+            File f = new File(Utility.dataDir, uuid + ".mp3");
             file.transferTo(f);
             handle.addAudioFile(uuid, f.getAbsolutePath());
         } catch (IOException e) {
@@ -47,7 +47,7 @@ public class FileController {
     @GetMapping("/gettopics")
     public ResponseEntity<IndexedAudioFile> getProcessedData(@RequestParam("id") String identify) {
         try {
-            return ResponseEntity.ok(obm.readValue(new File(Utility.doneDir.toFile(), identify + ".json"), IndexedAudioFile.class));
+            return ResponseEntity.ok(obm.readValue(new File(Utility.doneDir, identify + ".json"), IndexedAudioFile.class));
         } catch (IOException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();

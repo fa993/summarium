@@ -1,6 +1,10 @@
 package com.fa993.services;
 
 import okhttp3.*;
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.exec.LogOutputStream;
+import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
 import com.fa993.pojos.*;
@@ -15,6 +19,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -86,10 +91,15 @@ public class SymblAPIHandle {
                         this.filesToProcess.add(t);
                         break;
                     case AUDIO_PROCESSING:
+                        t.silenceTime = findSilenceTime(t);
+                        t.state = CompletionState.SILENCED_TIME_FOUND;
+                        break;
+                    case SILENCED_TIME_FOUND:
                         //make call to symbl api to check job state
                         System.out.println("Task Checking Status, " + t.state);
                         t.exponentialBackOffStep = t.exponentialBackOffStep > 7 ? 8 : t.exponentialBackOffStep + 1;
-                        if (Instant.now().isAfter(t.lastStatusCheck.plus((long) Math.pow(2, t.exponentialBackOffStep) + 4, ChronoUnit.SECONDS)) && checkJobState(t)) {
+                        Thread.sleep(500 + (long) Math.pow(2, t.exponentialBackOffStep) * 100);
+                        if (checkJobState(t)) {
                             t.state = CompletionState.AUDIO_PROCESSED;
                             System.out.println("Completed Processing");
                             t.exponentialBackOffStep = 0;
@@ -101,8 +111,8 @@ public class SymblAPIHandle {
                         TopicResponse tr = fetchTopics(t);
                         AnalyticsResponse ar = fetchAnalytics(t);
                         TranscriptResponse trr = fetchTranscript(t);
-                        IndexedAudioFile fr = process(tr, trr, ar);
-                        Utility.obm.writeValue(new File(doneDir.toFile(), t.uuid + ".json"), fr);
+                        IndexedAudioFile fr = process(tr, trr, ar, t.silenceTime);
+                        Utility.obm.writeValue(new File(doneDir, t.uuid + ".json"), fr);
                         t.state = CompletionState.COMPLETED;
                         this.filesToProcess.add(t);
                         System.out.println("Completed Analytics");
@@ -170,7 +180,7 @@ public class SymblAPIHandle {
 
 //        ProcessResponse res = Utility.obm.readValue(re.body().string(), ProcessResponse.class);
         ProcessResponse res = Utility.obm.readValue(re, ProcessResponse.class);
-        obm.writeValue(new File(metaDir.toFile(), t.uuid + ".json"), res);
+        obm.writeValue(new File(metaDir, t.uuid + ".json"), res);
         return res;
     }
 
@@ -237,29 +247,36 @@ public class SymblAPIHandle {
         return res;
     }
 
-    public IndexedAudioFile process(TopicResponse to, TranscriptResponse tr, AnalyticsResponse ar) {
+    public IndexedAudioFile process(TopicResponse to, TranscriptResponse tr, AnalyticsResponse ar, int silenceTime) {
         Map<String, Date> messagesIdsToTimestamps = new HashMap<>();
 
         IndexedAudioFile audi = new IndexedAudioFile();
+        audi.silenceTime = silenceTime;
         List<IndexedAudioFile.IndexedTopic> tps = new ArrayList<>();
 
-        for (TranscriptResponse.Message ms : tr.messages) {
-            messagesIdsToTimestamps.put(ms.id, ms.startTime);
-        }
+        if(tr.messages.length > 0) {
 
-        Arrays.sort(to.topics, (o1, o2) -> (int) ((o2.score - o1.score) * 1000));
+            Date dt = tr.messages[0].startTime;
 
-        for (int i = 0; i < to.topics.length && to.topics[i].score > 0.4; i++) {
-            IndexedAudioFile.IndexedTopic tp = new IndexedAudioFile.IndexedTopic();
-            tp.text = to.topics[i].text;
-            tp.timestamps = new Date[to.topics[i].messageIds.length];
-            for (int j = 0; j < to.topics[i].messageIds.length; j++) {
-                String msgId = to.topics[i].messageIds[j];
-                tp.timestamps[j] = messagesIdsToTimestamps.get(msgId);
-                tp.score = to.topics[i].score;
+            for (TranscriptResponse.Message ms : tr.messages) {
+                messagesIdsToTimestamps.put(ms.id, ms.startTime);
             }
-            tps.add(tp);
+
+            Arrays.sort(to.topics, (o1, o2) -> (int) ((o2.score - o1.score) * 1000));
+
+            for (int i = 0; i < to.topics.length; i++) {
+                IndexedAudioFile.IndexedTopic tp = new IndexedAudioFile.IndexedTopic();
+                tp.text = to.topics[i].text;
+                tp.timestamps = new long[to.topics[i].messageIds.length];
+                for (int j = 0; j < to.topics[i].messageIds.length; j++) {
+                    String msgId = to.topics[i].messageIds[j];
+                    tp.timestamps[j] = ((messagesIdsToTimestamps.get(msgId).getTime() - dt.getTime()) / 1000);
+                    tp.score = to.topics[i].score;
+                }
+                tps.add(tp);
+            }
         }
+
         audi.topics = tps.toArray(new IndexedAudioFile.IndexedTopic[0]);
         return audi;
     }
@@ -285,12 +302,24 @@ public class SymblAPIHandle {
             default:
                 return;
         }
-        ProcessResponse res = obm.readValue(new File(metaDir.toFile(), id + ".json"), ProcessResponse.class);
-        Task t = new Task(id, new File(dataDir.toFile(), id + ".mp3").getAbsolutePath());
+        ProcessResponse res = obm.readValue(new File(metaDir, id + ".json"), ProcessResponse.class);
+        Task t = new Task(id, new File(dataDir, id + ".mp3").getAbsolutePath());
         t.conversationId = res.conversationId;
         t.jobId = res.jobId;
         t.state = st;
         this.filesToProcess.add(t);
+    }
+
+    public int findSilenceTime(Task t) throws IOException {
+        String loc = Paths.get(".", "src/main/python/findsilencetime.py").normalize().toAbsolutePath().toString();
+
+        String line = "python3 " + loc +  " " + t.filename;
+        CommandLine cmdLine = CommandLine.parse(line);
+        DefaultExecutor executor = new DefaultExecutor();
+        AggregatedLogOutputStream lg = new AggregatedLogOutputStream();
+        executor.setStreamHandler(new PumpStreamHandler(lg));
+        int exitValue = executor.execute(cmdLine);
+        return (int) Double.parseDouble(lg.getLines().get(0));
     }
 
 }
@@ -304,6 +333,7 @@ class Task {
     CompletionState state;
     int exponentialBackOffStep = 0;
     Instant lastStatusCheck = Instant.MIN;
+    int silenceTime;
 
     public Task(String uuid, String fname) {
         this.uuid = uuid;
@@ -318,8 +348,22 @@ enum CompletionState {
     FAILED,
     SCHEDULED,
     AUDIO_PROCESSING,
-    AUDIO_PROCESSED
+    AUDIO_PROCESSED,
+    SILENCED_TIME_FOUND
 
+}
+
+class AggregatedLogOutputStream extends LogOutputStream {
+    private List<String> lines = new LinkedList<>();
+
+    @Override
+    protected void processLine(String line, int logLevel) {
+        lines.add(line);
+    }
+
+    public List<String> getLines() {
+        return lines;
+    }
 }
 
 
