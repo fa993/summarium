@@ -141,7 +141,7 @@ function updateTimestamps() {
   console.log(currentAnalytics);
   console.log((Date.now() - startTime) / 1000);
 
-  helper.innerHTML = "Click on the names of the topics to seek to their position in the audio file";
+  helper.innerHTML = "";
 
   but.innerHTML = "";
 
@@ -153,7 +153,11 @@ function updateTimestamps() {
     console.log("fuzzy");
     for(const tp of prop.timestamps) {
       var seeker = document.createElement("button");
-      var text = document.createTextNode("\"" + prop.text + "\" at time " + Math.floor(tp / 60) + ":" + tp % 60);
+      seeker.setAttribute(
+        'style',
+        'color:#66BB6A'
+      );
+      var text = document.createTextNode("Click here to navigate to The Topic: "+"\"" + prop.text + "\"which starts at time " + Math.floor(tp / 60) + ":" + tp % 60);
       seeker.appendChild(text);
       seeker.addEventListener('click', setCurTime(currentAnalytics.silenceTime + tp), false)
       but.appendChild(seeker);
