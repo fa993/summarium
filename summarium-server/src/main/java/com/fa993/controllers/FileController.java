@@ -1,5 +1,7 @@
 package com.fa993.controllers;
 
+import com.fa993.pojos.IndexedAudioFile;
+import com.fa993.services.SymblAPIHandle;
 import com.fa993.utils.Utility;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -9,13 +11,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import com.fa993.pojos.IndexedAudioFile;
-import com.fa993.services.SymblAPIHandle;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 import static com.fa993.utils.Utility.obm;

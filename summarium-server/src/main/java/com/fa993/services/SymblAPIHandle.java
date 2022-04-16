@@ -1,32 +1,32 @@
 package com.fa993.services;
 
-import okhttp3.*;
+import com.fa993.pojos.*;
+import com.fa993.utils.Utility;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
-import com.fa993.pojos.*;
-import com.fa993.utils.Utility;
-import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.annotation.PreDestroy;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.fa993.utils.Utility.*;
 
@@ -165,20 +165,6 @@ public class SymblAPIHandle {
 
         System.out.println(re);
 
-//        File fr = new File(t.filename);
-//
-//        FormBody bdy = new FormBody.Builder().
-//
-//        Request r = new Request.Builder()
-//                .addHeader("Authorization", "Bearer " + Utility.key.accessToken)
-//                .addHeader("Content-Type", "audio/mp3")
-//                .url("https://api.symbl.ai/v1/process/audio?name=" + t.filename + "&confidenceThreshold=0.6&sentiment=true")
-//                .post(new .Builder().setType(MultipartBody.FORM).addFormDataPart("file", fr.getName(), RequestBody.Companion.create(fr, audioType)).build())
-//                .build();
-//
-//        Response re = client.newCall(r).execute();
-
-//        ProcessResponse res = Utility.obm.readValue(re.body().string(), ProcessResponse.class);
         ProcessResponse res = Utility.obm.readValue(re, ProcessResponse.class);
         obm.writeValue(new File(metaDir, t.uuid + ".json"), res);
         return res;
@@ -248,7 +234,8 @@ public class SymblAPIHandle {
     }
 
     public IndexedAudioFile process(TopicResponse to, TranscriptResponse tr, AnalyticsResponse ar, int silenceTime) {
-        Map<String, Date> messagesIdsToTimestamps = new HashMap<>();
+        Map<String, Date> messagesIdsToTimestampsStart = new HashMap<>();
+        Map<String, Date> messagesIdsToTimestampsEnd = new HashMap<>();
 
         IndexedAudioFile audi = new IndexedAudioFile();
         audi.silenceTime = silenceTime;
@@ -256,10 +243,11 @@ public class SymblAPIHandle {
 
         if(tr.messages.length > 0) {
 
-            Date dt = tr.messages[0].startTime;
+            long dt = tr.messages[0].startTime.getTime();
 
             for (TranscriptResponse.Message ms : tr.messages) {
-                messagesIdsToTimestamps.put(ms.id, ms.startTime);
+                messagesIdsToTimestampsStart.put(ms.id, ms.startTime);
+                messagesIdsToTimestampsEnd.put(ms.id, ms.endTime);
             }
 
             Arrays.sort(to.topics, (o1, o2) -> (int) ((o2.score - o1.score) * 1000));
@@ -267,12 +255,28 @@ public class SymblAPIHandle {
             for (int i = 0; i < to.topics.length; i++) {
                 IndexedAudioFile.IndexedTopic tp = new IndexedAudioFile.IndexedTopic();
                 tp.text = to.topics[i].text;
+                tp.score = to.topics[i].score;
+                List<Long> timestarts = new ArrayList<>();
                 tp.timestamps = new long[to.topics[i].messageIds.length];
-                for (int j = 0; j < to.topics[i].messageIds.length; j++) {
-                    String msgId = to.topics[i].messageIds[j];
-                    tp.timestamps[j] = ((messagesIdsToTimestamps.get(msgId).getTime() - dt.getTime()) / 1000);
-                    tp.score = to.topics[i].score;
+                long thresholdForFragmentation = 20;
+                long last = -1;
+                if(to.topics[i].messageIds.length > 0) {
+                    last = messagesIdsToTimestampsStart.get(to.topics[i].messageIds[0]).getTime();
+                    timestarts.add((last - dt) / 1000);
+                    last = messagesIdsToTimestampsEnd.get(to.topics[i].messageIds[0]).getTime();
                 }
+                for (int j = 1; j < to.topics[i].messageIds.length; j++) {
+                    String msgId = to.topics[i].messageIds[j];
+                    long tm = messagesIdsToTimestampsStart.get(msgId).getTime();
+                    long tm1 = messagesIdsToTimestampsEnd.get(msgId).getTime();
+                    if(tm - last <= thresholdForFragmentation * 1000) {
+                        last = tm1;
+                        continue;
+                    }
+                    timestarts.add((tm - dt) / 1000);
+                    last = tm1;
+                }
+                tp.timestamps = timestarts.stream().mapToLong(t -> t).toArray();
                 tps.add(tp);
             }
         }
@@ -299,6 +303,8 @@ public class SymblAPIHandle {
             case 4:
                 st = CompletionState.AUDIO_PROCESSED;
                 break;
+            case 5:
+                st = CompletionState.SILENCED_TIME_FOUND;
             default:
                 return;
         }
