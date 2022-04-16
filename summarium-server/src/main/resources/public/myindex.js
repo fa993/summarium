@@ -16,22 +16,32 @@ console.log(status);
 var helper = document.getElementById("helptext");
 var but = document.getElementById('buttonDiv');
 
+function printError() {
+  clearInterval(timer_handle);
+  clearInterval(dotHandler);
+  helper.innerHTML = "Some error occured";
+}
+
 //run the below function in setInterval
 function updateStatus() {
   if(status === "false") {
     fetch("http://localhost:8080/checkstatus?id=" + id, {
       method: "get"
     })
-    .then(r => r.text())
+    .then(response => response.text())
     .then(y => {
       console.log(y);
-      status = y;
-      if(y === "true") {
-        clearInterval(timer_handle);
-        clearInterval(dotHandler);
-        getAnalysisFromId(id);
+      if(y === "error") {
+        printError();
+      } else {
+        status = y;
+        if(y === "true") {
+          clearInterval(timer_handle);
+          clearInterval(dotHandler);
+          getAnalysisFromId(id);
+        }
       }
-    }).error(y => printError());
+    }).catch(error => printError());
   }
 }
 
@@ -62,10 +72,6 @@ function poll() {
   dotHandler = setInterval(printDot, 300);
 }
 
-function printError() {
-  helper.innerHTML = "Some Error occured";
-}
-
 function handleFiles(e) {
     var files = e.target.files;
     $("#src").attr("src", URL.createObjectURL(files[0]));
@@ -85,7 +91,7 @@ function handleFiles(e) {
           startTime = Date.now();
           poll();
           console.log("Heeeeere")
-        }).error(y => printError());
+        }).catch(y => printError());
     console.log("Hey");
 }
 
@@ -120,7 +126,7 @@ function getAnalysisFromId(id) {
   .then(y => {
     currentAnalytics = y;
     updateTimestamps();
-  }).error(y => printError());
+  }).catch(y => printError());
 }
 
 function setCurTime(c) {

@@ -41,6 +41,9 @@ public class FileController {
 
     @GetMapping("/checkstatus")
     public ResponseEntity<?> getStatus(@RequestParam("id") String id) {
+        if(handle.isError(id)) {
+            return ResponseEntity.ok("error");
+        }
         return ResponseEntity.ok(handle.isDone(id));
     }
 

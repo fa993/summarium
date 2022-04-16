@@ -45,6 +45,8 @@ public class SymblAPIHandle {
 
     private Set<String> doneFiles = ConcurrentHashMap.newKeySet();
 
+    private Set<String> errorFiles = ConcurrentHashMap.newKeySet();
+
     private ExecutorService exService;
 
     public SymblAPIHandle() {
@@ -118,6 +120,7 @@ public class SymblAPIHandle {
                 case FAILED:
                     //notify using websocket that task failed
                     System.out.println("Failed: " + t.uuid);
+                    this.errorFiles.add(t.uuid);
                     break;
                 case COMPLETED:
                     System.out.println("Done " + t.uuid);
@@ -214,6 +217,10 @@ public class SymblAPIHandle {
 
      public boolean isDone(String id) {
         return doneFiles.contains(id);
+     }
+
+     public boolean isError(String id) {
+        return errorFiles.contains(id);
      }
 
     public ProcessResponse processConversation(Task t) throws IOException {
@@ -413,8 +420,7 @@ public class SymblAPIHandle {
     }
 
     public int findSilenceTime(Task t) throws IOException {
-        String loc = Paths.get(".", "src/main/python/findsilencetime.py").normalize().toAbsolutePath().toString();
-
+        String loc = Paths.get(".", "src", "main", "python", "findsilencetime.py").normalize().toAbsolutePath().toString();
         String line = "python3 " + loc +  " " + t.filename;
         CommandLine cmdLine = CommandLine.parse(line);
         DefaultExecutor executor = new DefaultExecutor();
