@@ -41,96 +41,39 @@
                 <path d="M16.88 9.1A4 4 0 0 1 16 17H5a5 5 0 0 1-1-9.9V7a3 3 0 0 1 4.52-2.59A4.98 4.98 0 0 1 17 8c0 .38-.04.74-.12 1.1zM11 11h3l-4-4-4 4h3v3h2v-3z" />
             </svg>
             <span class="mt-2 text-base leading-normal">Select an Audio file</span>
-           <input type='file' accept="audio/*" class="hidden " id="upload" onchange="uploadFile()" name="upload"/>
-            <progress id="progressBar" value="0" max="100" style="width:100px;"></progress>
-            <h3 id="status"></h3>
-            <p id="loaded_n_total"></p>
-            <script>
-            function _(el) {
-              return document.getElementById(el);
-            }
-            
-            function uploadFile() {
-              var file = _("upload").files[0];
-              // alert(file.name+" | "+file.size+" | "+file.type);
-              var formdata = new FormData();
-              formdata.append("uplpad", file);
-              var ajax = new XMLHttpRequest();
-              ajax.upload.addEventListener("progress", progressHandler, false);
-              ajax.addEventListener("load", completeHandler, false);
-              ajax.addEventListener("error", errorHandler, false);
-              ajax.addEventListener("abort", abortHandler, false);
-              ajax.open("POST", "file_upload_parser.php"); // http://www.developphp.com/video/JavaScript/File-Upload-Progress-Bar-Meter-Tutorial-Ajax-PHP
-              //use file_upload_parser.php from above url
-              ajax.send(formdata);
-            }
-            
-            function progressHandler(event) {
-              _("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
-              var percent = (event.loaded / event.total) * 100;
-              _("progressBar").value = Math.round(percent);
-              _("status").innerHTML = Math.round(percent) + "% uploaded... please wait";
-            }
-            
-            function completeHandler(event) {
-              _("status").innerHTML = event.target.responseText;
-              _("progressBar").value = 0; //wil clear progress bar after successful upload
-            }
-            
-            function errorHandler(event) {
-              _("status").innerHTML = "Upload Failed";
-            }
-            
-            function abortHandler(event) {
-              _("status").innerHTML = "Upload Aborted";
-            }
-            </script>
-          <div class="loading"><img src="https://media1.giphy.com/media/Qc8UoA7NJqx70SfiCL/giphy.gif?cid=790b761197650f9e79643f74848538b88091e09a8f23df6e&rid=giphy.gif&ct=g" alt="Loading" ></div>
+           <input type='file' accept="audio/*" class="hidden" id="upload"/>
+
+          <!-- <div class="loading"><img src="https://media1.giphy.com/media/Qc8UoA7NJqx70SfiCL/giphy.gif?cid=790b761197650f9e79643f74848538b88091e09a8f23df6e&rid=giphy.gif&ct=g" alt="Loading" ></div> -->
         </label>
         </form>
+
       </div>
 
 
     <div class="text-center lg:w-2/3 w-full py-5">
       <h1 class="title-font sm:text-4xl text-3xl mb-4 font-medium text-white">Summarising Topics For You</h1>
       <p class="leading-relaxed mb-8">In the Covid Era, when you have dozens of video recordings spanning more than 2 hours each, it gets hard to know which topics are covered in which meetings, and it is not feasible to go through all of the recordings to try and find that one topic that you have doubts in.
-        Especially when you need to do last minute revisions before an exam.Get It Done Using Summarium</p>
+        Especially when you need to do last minute revisions before an exam. Get It Done Using Summarium</p>
     </div>
 
 
     <audio id="audio" controls>
         <source src="" id="src" />
-      </audio>
-     <div id="buttons">
-       <br><button>Topic Name Starts at time position to 0 seconds</button>
+    </audio>
+
+    <p class="leading-relaxed mb-8" id="helptext">
+      <!-- Click on the names of the topics to seek to their position in the audio file -->
+    </p>
+
+    <div id="buttonDiv">
+       <!-- <br><button>Topic Name Starts at time position to 0 seconds</button>
        <br><button>Topic Name Starts to 5 seconds</button>
        <br><button>Topic Name Starts to 03:30 minutes</button>
-       <br><button>Topic Name Startsto 11:05 minutes</button>
-      </div>
-    
-     </div>
-    
-    <script>
-     (function(d) {
-       'use strict';
-    
-       var set = [ 0, 5, 210, 665 ];
-       var aud = d.getElementById('myAudio');
-       var but = d.getElementById('buttons').getElementsByTagName('button');
-    
-       for ( var c = 0; c < but.length; c ++ ) {
-          but[c].addEventListener('click',setCurTime(c), false);
-          } 
-         
-     function setCurTime(c) {  
-       but[c].onclick = function() { 
-          aud.currentTime = set[c];
-          aud.play();      
-             }
-          }
-     }(document));
-    </script>
+       <br><button>Topic Name Startsto 11:05 minutes</button> -->
     </div>
+
+  </div>
+
 </section>
 
 

@@ -39,6 +39,8 @@ public class SymblAPIHandle {
 
     private boolean killed = false;
 
+    private static int exponentialBackOffLimit = 4;
+
     private OkHttpClient client = new OkHttpClient.Builder().readTimeout(10, TimeUnit.MINUTES).writeTimeout(10, TimeUnit.MINUTES).connectTimeout(10, TimeUnit.MINUTES).build();
 
     private Set<String> doneFiles = ConcurrentHashMap.newKeySet();
@@ -57,16 +59,77 @@ public class SymblAPIHandle {
             return t;
         });
 
-        for(int i = 0; i < num; i++) {
-            exService.submit(this::threadTask);
-        }
+//        for(int i = 0; i < num; i++) {
+//            exService.submit(this::threadTask);
+//        }
 
 
         System.out.println("Instantiated");
     }
 
     public void addAudioFile(String uuid, String filename) {
-        filesToProcess.add(new Task(uuid, filename));
+//        filesToProcess.add(new Task(uuid, filename));
+        Task t = new Task(uuid, filename);
+        exService.submit(() -> this.threadTaskV2(t));
+    }
+
+    public void threadTaskV2(Task t) {
+        try {
+            switch (t.state) {
+                case SCHEDULED:
+                    //make call to symblapi to submit audio
+
+                    ProcessResponse resp = processConversation(t);
+
+                    t.conversationId = resp.conversationId;
+                    t.jobId = resp.jobId;
+                    t.state = CompletionState.AUDIO_PROCESSING;
+                    exService.submit(() -> this.threadTaskV2(t));
+                    break;
+                case AUDIO_PROCESSING:
+                    System.out.println("Task finding silence, " + t.state);
+                    t.silenceTime = findSilenceTime(t);
+                    t.state = CompletionState.SILENCED_TIME_FOUND;
+                    exService.submit(() -> this.threadTaskV2(t));
+                    break;
+                case SILENCED_TIME_FOUND:
+                    //make call to symbl api to check job state
+                    System.out.println("Task Checking Status, " + t.state);
+                    t.exponentialBackOffStep = t.exponentialBackOffStep > 7 ? 8 : t.exponentialBackOffStep + 1;
+                    Thread.sleep(500 + (long) Math.pow(2, t.exponentialBackOffStep) * 100);
+                    if (checkJobState(t)) {
+                        t.state = CompletionState.AUDIO_PROCESSED;
+                        System.out.println("Completed Processing");
+                        t.exponentialBackOffStep = 0;
+                    }
+                    exService.submit(() -> this.threadTaskV2(t));
+                    break;
+                case AUDIO_PROCESSED:
+                    //make calls to get the corresponding data... (get messages, topics, and summary) and save json file
+                    TopicResponse tr = fetchTopics(t);
+                    AnalyticsResponse ar = fetchAnalytics(t);
+                    TranscriptResponse trr = fetchTranscript(t);
+                    IndexedAudioFile fr = process(tr, trr, ar, t.silenceTime);
+                    Utility.obm.writeValue(new File(doneDir, t.uuid + ".json"), fr);
+                    t.state = CompletionState.COMPLETED;
+                    exService.submit(() -> this.threadTaskV2(t));
+                    System.out.println("Completed Analytics");
+                    break;
+                case FAILED:
+                    //notify using websocket that task failed
+                    System.out.println("Failed: " + t.uuid);
+                    break;
+                case COMPLETED:
+                    System.out.println("Done " + t.uuid);
+                    this.doneFiles.add(t.uuid);
+                    //notify using websocket that task has been successful
+                    break;
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            t.state = CompletionState.FAILED;
+            exService.submit(() -> this.threadTaskV2(t));
+        }
     }
 
     public void threadTask() {
@@ -99,7 +162,7 @@ public class SymblAPIHandle {
                     case SILENCED_TIME_FOUND:
                         //make call to symbl api to check job state
                         System.out.println("Task Checking Status, " + t.state);
-                        t.exponentialBackOffStep = t.exponentialBackOffStep > 7 ? 8 : t.exponentialBackOffStep + 1;
+                        t.exponentialBackOffStep = t.exponentialBackOffStep > exponentialBackOffLimit ? exponentialBackOffLimit + 1 : t.exponentialBackOffStep + 1;
                         Thread.sleep(500 + (long) Math.pow(2, t.exponentialBackOffStep) * 100);
                         if (checkJobState(t)) {
                             t.state = CompletionState.AUDIO_PROCESSED;
@@ -316,6 +379,37 @@ public class SymblAPIHandle {
         t.jobId = res.jobId;
         t.state = st;
         this.filesToProcess.add(t);
+    }
+
+    public void pushCustomTaskV2(String id, int taskStatus) throws IOException {
+        CompletionState st = null;
+        switch (taskStatus) {
+            case 0:
+                st = CompletionState.COMPLETED;
+                break;
+            case 1:
+                st = CompletionState.FAILED;
+                break;
+            case 2:
+                st = CompletionState.SCHEDULED;
+                break;
+            case 3:
+                st = CompletionState.AUDIO_PROCESSING;
+                break;
+            case 4:
+                st = CompletionState.AUDIO_PROCESSED;
+                break;
+            case 5:
+                st = CompletionState.SILENCED_TIME_FOUND;
+            default:
+                return;
+        }
+        ProcessResponse res = obm.readValue(new File(metaDir, id + ".json"), ProcessResponse.class);
+        Task t = new Task(id, new File(dataDir, id + ".mp3").getAbsolutePath());
+        t.conversationId = res.conversationId;
+        t.jobId = res.jobId;
+        t.state = st;
+        this.exService.submit(() -> this.threadTaskV2(t));
     }
 
     public int findSilenceTime(Task t) throws IOException {

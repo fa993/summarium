@@ -1,7 +1,5 @@
 var formName = "#audioform";
 
-var idsToFileNames = {};
-var idsToStatus = {};
 var currentAnalytics = {};
 
 var id;
@@ -10,7 +8,13 @@ var status = "false"; // trivial comparison to get false
 var timer_handle;
 var startTime;
 
+var dotCount = 0;
+var dotHandler;
+
 console.log(status);
+
+var helper = document.getElementById("helptext");
+var but = document.getElementById('buttonDiv');
 
 //run the below function in setInterval
 function updateStatus() {
@@ -24,14 +28,42 @@ function updateStatus() {
       status = y;
       if(y === "true") {
         clearInterval(timer_handle);
+        clearInterval(dotHandler);
         getAnalysisFromId(id);
       }
-    })
+    }).error(y => printError());
   }
 }
 
+function printDot() {
+  switch (dotCount) {
+    case 0:
+      helper.innerHTML = "Processing";
+      break;
+    case 1:
+      helper.innerHTML = "Processing.";
+      break;
+    case 2:
+      helper.innerHTML = "Processing..";
+      break;
+    case 3:
+      helper.innerHTML = "Processing...";
+      break;
+    default:
+      dotCount = 0;
+      break;
+  }
+  dotCount = (dotCount + 1) % 4;
+}
+
 function poll() {
-  timer_handle = setInterval(updateStatus, 10000);
+  timer_handle = setInterval(updateStatus, 3000);
+  but.innerHTML = "";
+  dotHandler = setInterval(printDot, 300);
+}
+
+function printError() {
+  helper.innerHTML = "Some Error occured";
 }
 
 function handleFiles(e) {
@@ -53,13 +85,14 @@ function handleFiles(e) {
           startTime = Date.now();
           poll();
           console.log("Heeeeere")
-        });
+        }).error(y => printError());
     console.log("Hey");
-
 }
 
 document.getElementById("upload").addEventListener("change", handleFiles, false);
 console.log('hellllo');
+
+var aud = document.getElementById('audio');
 
 
 // //run this function once on startup
@@ -87,13 +120,41 @@ function getAnalysisFromId(id) {
   .then(y => {
     currentAnalytics = y;
     updateTimestamps();
-  })
+  }).error(y => printError());
+}
+
+function setCurTime(c) {
+  return function() {
+    aud.currentTime = c;
+    aud.play();
+  }
 }
 
 //call when new Data has arrived
 function updateTimestamps() {
   console.log(currentAnalytics);
   console.log((Date.now() - startTime) / 1000);
+
+  helper.innerHTML = "Click on the names of the topics to seek to their position in the audio file";
+
+  but.innerHTML = "";
+
+  //Now create the buttons
+  for(const prop of currentAnalytics.topics) {
+    if(prop.score < 0.2) {
+      continue;
+    }
+    console.log("fuzzy");
+    for(const tp of prop.timestamps) {
+      var seeker = document.createElement("button");
+      var text = document.createTextNode("\"" + prop.text + "\" at time " + Math.floor(tp / 60) + ":" + tp % 60);
+      seeker.appendChild(text);
+      seeker.addEventListener('click', setCurTime(currentAnalytics.silenceTime + tp), false)
+      but.appendChild(seeker);
+      but.appendChild(document.createElement("br"));
+    }
+  }
+
 }
 
 // readFromLocalStorage();

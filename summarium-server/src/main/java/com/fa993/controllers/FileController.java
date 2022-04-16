@@ -57,7 +57,7 @@ public class FileController {
     @GetMapping("/debugtask")
     public ResponseEntity<?> pushCustomTask(@RequestParam("id") String id, @RequestParam("taskState") int taskState) {
         try {
-            handle.pushCustomTask(id, taskState);
+            handle.pushCustomTaskV2(id, taskState);
             return ResponseEntity.ok().build();
         } catch (IOException e) {
             e.printStackTrace();
