@@ -4,6 +4,7 @@ import com.fa993.utils.Utility;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,13 +21,14 @@ import java.util.UUID;
 import static com.fa993.utils.Utility.obm;
 
 @Controller
+@CrossOrigin()
 public class FileController {
 
     @Autowired
     SymblAPIHandle handle;
 
     @PostMapping("/processaudio")
-    public ResponseEntity<?> handleFileUpload(@RequestParam("audiofile")MultipartFile file) {
+    public ResponseEntity<?> handleFileUpload(@RequestParam("upload")MultipartFile file) {
         String uuid = UUID.randomUUID().toString();
         try {
             File f = new File(Utility.dataDir, uuid + ".mp3");
