@@ -43,6 +43,7 @@
             </svg>
             <span class="mt-2 text-base leading-normal">Select an Audio file</span>
             <input type='file' accept="audio/*" class="hidden " id="upload"/>
+          <div class="loading"><img src="https://media1.giphy.com/media/Qc8UoA7NJqx70SfiCL/giphy.gif?cid=790b761197650f9e79643f74848538b88091e09a8f23df6e&rid=giphy.gif&ct=g" alt="Loading" ></div>
         </label>
         </form>
       </div>
@@ -55,9 +56,38 @@
     </div>
     
     
-    <audio id="audio" controls>
+    <audio id="myAudio" controls>
         <source src="" id="src" />
       </audio>
+          <div id="buttons">
+       <br><button>Topic Name Starts at time position to 0 seconds</button>
+       <br><button>Topic Name Starts to 5 seconds</button>
+       <br><button>Topic Name Starts to 03:30 minutes</button>
+       <br><button>Topic Name Startsto 11:05 minutes</button>
+      </div>
+    
+     </div>
+    
+    <script>
+     (function(d) {
+       'use strict';
+    
+       var set = [ 0, 5, 210, 665 ];
+       var aud = d.getElementById('myAudio');
+       var but = d.getElementById('buttons').getElementsByTagName('button');
+    
+       for ( var c = 0; c < but.length; c ++ ) {
+          but[c].addEventListener('click',setCurTime(c), false);
+          } 
+         
+     function setCurTime(c) {  
+       but[c].onclick = function() { 
+          aud.currentTime = set[c];
+          aud.play();      
+             }
+          }
+     }(document));
+    </script>
     </div>
 </section>
 
