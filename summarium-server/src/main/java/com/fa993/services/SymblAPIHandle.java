@@ -91,8 +91,10 @@ public class SymblAPIHandle {
                         this.filesToProcess.add(t);
                         break;
                     case AUDIO_PROCESSING:
+                        System.out.println("Task finding silence, " + t.state);
                         t.silenceTime = findSilenceTime(t);
                         t.state = CompletionState.SILENCED_TIME_FOUND;
+                        this.filesToProcess.add(t);
                         break;
                     case SILENCED_TIME_FOUND:
                         //make call to symbl api to check job state

@@ -28,6 +28,6 @@ audio_path = sys.argv[1]
 
 threshold = -35 # tweak based on signal-to-noise ratio
 
-interval = 1 # ms, increase to speed up
+interval = 10 # ms, increase to speed up
 
 print(get_silence(audio_path, threshold, interval))
